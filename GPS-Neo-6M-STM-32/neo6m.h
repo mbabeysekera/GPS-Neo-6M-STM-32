@@ -8,7 +8,7 @@
 #define GPS_CHECKSUM    9
 #define GPGLL_LENGTH    5
 
-#define GPS_MESSACE_CODE "GPGLL"
+#define GPS_MESSACE_CODE "GPGLL" //GPGLL message was selected for the project
 
 struct GPSInfo {
   char sentenceType[GPGLL_LENGTH];
@@ -22,7 +22,7 @@ struct GPSInfo {
 class GPS {
   public:
     GPS();
-    void fieldSeparator(char incomingByte);
+    void fieldSeparator(char incomingByte); //this function will process each character
     double getLatitude();
     double getLongitude();
     char getFix();
@@ -30,7 +30,7 @@ class GPS {
     unsigned short getChecksumCal();
 
   private:
-    char fieldData[16];
+    char fieldData[16]; // to hold the incoming data temporary, array of 16 eliments is used
     unsigned short filedCounter;
     unsigned short charCounter;
     unsigned short shouldReadContinue;
@@ -39,9 +39,9 @@ class GPS {
     unsigned short isValidSentence;
     GPSInfo gpsInfo;
 
-    void organizer(char field, char* data);
-    double positionFormatter(char* coordinate);
-    unsigned short hexToDecConverter(char* term);
+    void organizer(char field, char* data); // each filed is identified by this function and put them in relevent field
+    double positionFormatter(char* coordinate); // GPS module LAT LONG will be converted into standard GPS coordinates
+    unsigned short hexToDecConverter(char* term); // convert chechsum data from GPS module to decimal format
 };
 
 #endif
