@@ -4,90 +4,128 @@
 #include <ctype.h>
 
 GPS::GPS() {
-  filedCounter = 0;
-  charCounter = 0;
-  shouldReadContinue = 0;
-  isChecksum = 0;
-  checksum = 0x00;
-  isValidSentence = 0;
 }
 
-void GPS::fieldSeparator(char incomingByte) {
-  if (incomingByte == '$') {
-    isChecksum = 0;
-    checksum = 0x00;
-    shouldReadContinue = 1;
-    filedCounter = 0;
-    charCounter = 0;
-    memset(fieldData, '\0', sizeof(fieldData));
-  }
-  else {
-    if ((incomingByte == ',' || incomingByte == '*' || incomingByte == '\r' || incomingByte == '\n') && shouldReadContinue) {
-      filedCounter++;
-      charCounter = 0;
-      organizer(filedCounter, fieldData);
-      memset(fieldData, '\0', sizeof(fieldData));
-      if (incomingByte == '\r' || incomingByte == '\n') {
-        shouldReadContinue = 0;
-      }
-      if (incomingByte == '*')
+void GPS::fieldSeparator(char byteValue) {
+  switch (byteValue) {
+    case '$': {
+        filedCounter = 0;
+        charCounter = 0;
+        shouldReadContinue = 1;
+        isChecksum = 0;
+        checksum = 0;
+        isValidSentence = 0;
+      } break;
+    case '\r':
+    case ',':
       {
+        if (byteValue == ',') {
+          checksum ^= (short)byteValue;
+        }
+        charCounter = 0;
+        filedCounter++;
+        organizer(filedCounter, fieldData);
+      } break;
+    case '*': {
         isChecksum = 1;
+        charCounter = 0;
+        filedCounter++;
+      } break;
+    case '\n': {
+        shouldReadContinue = 0;
+        filedCounter = 0;
       }
-    }
-    else if (shouldReadContinue) {
-      fieldData[charCounter] = incomingByte;
-      charCounter++;
-    }
-    if (incomingByte != '*' && incomingByte != '\r' && incomingByte != '\n' && !isChecksum) {
-      checksum ^= (unsigned short)incomingByte;
-    }
+      break;
+    default: {
+        if (shouldReadContinue) {
+          fieldData[charCounter] = byteValue;
+          charCounter++;
+          if (!isChecksum) {
+            checksum ^= (short)byteValue;
+          }
+        }
+      };
   }
-
 }
 
 double GPS::getLatitude() {
-  return gps.latitude;
+  double tempResult;
+  if (1) {
+    tempResult = gpsInfo.latitude;
+  } else {
+    tempResult = 9999.0;
+  }
+  return tempResult;
 }
 
-double GPS::getlLongitude() {
-  return gps.longitude;
+double GPS::getLongitude() {
+  double tempResult;
+  if (1) {
+    tempResult = gpsInfo.longitude;
+  } else {
+    tempResult = 9999.0;
+  }
+  return tempResult;
+}
+
+char GPS::getFix() {
+  return gpsInfo.hasFix;
+}
+unsigned short GPS::getChecksumRec() {
+  return gpsInfo.checksumRec;
+}
+unsigned short GPS::getChecksumCal() {
+  return gpsInfo.checksumCal;
 }
 
 void GPS::organizer(char field, char* data) {
   switch (field) {
-    case MESSAGE_ID:
-      strcpy(gps.sentenceType, data);
-      if (strcmp(GPS_MESSACE_CODE, gps.sentenceType) != 0) {
-        shouldReadContinue = 0;
+    case MESSAGE_ID: {
+        if (strcmp(GPS_MESSACE_CODE, data) == 0) {
+          strcpy(gpsInfo.sentenceType, data);
+          shouldReadContinue = 1;
+        } else {
+          shouldReadContinue = 0;
+        }
+      } break;
+    case LATTITUDE: {
+        if (shouldReadContinue) {
+          gpsInfo.latitude = positionFormatter(data);
+        }
       }
       break;
-    case LATTITUDE:
-      if (isValidSentence) {
-        gps.latitude = positionFormatter(data);
+    case LONGITUDE: {
+        if (shouldReadContinue) {
+          gpsInfo.longitude = positionFormatter(data);
+        }
       }
       break;
-    case LONGITUDE:
-      if (isValidSentence) {
-        gps.longitude = positionFormatter(data);
+    case GPS_FIX_STATUS: {
+        if (shouldReadContinue) {
+          gpsInfo.hasFix = *data;
+        }
       }
       break;
-    case GPS_FIX_STATUS: gps.hasFix = *data; break;
-    case GPS_CHECKSUM:
-      strcpy(gps.checkSumA, data);
-      //      hexToDecConverter(gps.checkSumA);
-      if (1) {
-        isValidSentence = 1;
-      } else {
-        isValidSentence = 0;
+    case GPS_CHECKSUM: {
+        if (shouldReadContinue) {
+          gpsInfo.checksumRec = hexToDecConverter(data);
+          gpsInfo.checksumCal = checksum;
+          if (gpsInfo.checksumRec != gpsInfo.checksumCal) {
+            isValidSentence = 0;
+          } else {
+            isValidSentence = 1;
+          }
+        }
       }
       break;
   }
+  charCounter = 0;
+  memset(fieldData, '\0', sizeof(fieldData));
 }
 
 double GPS::positionFormatter(char* coordinate) {
   long intPart = 0;
-  long decimalPart = 0L;
+  long decimalPart = 0;
   char isDecimal = 0;
   char tempArray[8] = { 0 };
   int counter = 0;
@@ -108,13 +146,10 @@ double GPS::positionFormatter(char* coordinate) {
     coordinate++;
   }
   decimalPart = atol(tempArray);
-
-  long tempDec = (intPart % 100L) * 100000L;
+  long tempDec = (intPart % 100) * 100000L;
   decimalPart = tempDec + decimalPart;
-  intPart = intPart / 100L;
-
+  intPart = intPart / 100;
   double r = ((double)intPart + ((double)decimalPart / 10000000.0) * 1.6666667);
-
   if (isNegative) {
     r *= -1;
   }

@@ -1,12 +1,12 @@
 #ifndef _NEO_6M
 #define _NEO_6M
 
-#define MESSAGE_ID    1
-#define LATTITUDE   2
-#define LONGITUDE   4
+#define MESSAGE_ID      1
+#define LATTITUDE       2
+#define LONGITUDE       4
 #define GPS_FIX_STATUS  7
-#define GPS_CHECKSUM  9
-#define GPGLL_LENGTH  5
+#define GPS_CHECKSUM    9
+#define GPGLL_LENGTH    5
 
 #define GPS_MESSACE_CODE "GPGLL"
 
@@ -15,7 +15,8 @@ struct GPSInfo {
   double latitude;
   double longitude;
   char hasFix;
-  char checkSumA[2];
+  unsigned short checksumRec;
+  unsigned short checksumCal;
 };
 
 class GPS {
@@ -23,23 +24,24 @@ class GPS {
     GPS();
     void fieldSeparator(char incomingByte);
     double getLatitude();
-    double getlLongitude();
-    unsigned short hexToDecConverter(char* term);
-
+    double getLongitude();
+    char getFix();
+    unsigned short getChecksumRec();
+    unsigned short getChecksumCal();
 
   private:
     char fieldData[16];
-    char filedCounter;
-    char charCounter;
-    char shouldReadContinue;
-    char isChecksum;
+    unsigned short filedCounter;
+    unsigned short charCounter;
+    unsigned short shouldReadContinue;
+    unsigned short isChecksum;
     unsigned short checksum;
-    GPSInfo gps;
     unsigned short isValidSentence;
+    GPSInfo gpsInfo;
 
     void organizer(char field, char* data);
     double positionFormatter(char* coordinate);
-    
+    unsigned short hexToDecConverter(char* term);
 };
 
 #endif
